@@ -20,13 +20,18 @@ data class PizzaUiState(
     val pizzaDto: PizzaDto = getpizzadto(),
     var crustSizeMap: MutableMap<String, List<String>> = mutableMapOf(),
     var currentPrice: Int = 235,
-    var cartItemList :MutableList<CartItem> = mutableListOf()
+    var cartItemList: MutableList<CartItem> = mutableListOf(),
+    val totalQuantity: Int = 0,
+    val totalPrice: Int = 0
 
-    )
+)
 
 sealed class UiEvent() {
-    data class Selected(val selectedCrust: String,val selectedSize: String) : UiEvent()
-    data class AddItemToCart(val cartItem: CartItem):UiEvent()
+    data class Selected(val selectedCrust: String, val selectedSize: String) : UiEvent()
+    data class AddItemToCart(val cartItem: CartItem) : UiEvent()
+    data class AddQuantity(val cartItem: CartItem) : UiEvent()
+    data class RemoveItemFromCart(val cartItem: CartItem) : UiEvent()
+    data class ReduceQuantity(val cartItem: CartItem) : UiEvent()
 }
 
 @HiltViewModel
@@ -36,8 +41,11 @@ class MainViewModel @Inject constructor(
 
     var pizzaUiState by mutableStateOf(PizzaUiState())
 
-    var crustSizeList: MutableMap<String, List<String>> = mutableMapOf()
+    private var crustSizeList: MutableMap<String, List<String>> = mutableMapOf()
 
+
+    private var totalQuantity = 0
+    private var totalPrice = 0
 
     init {
         viewModelScope.launch {
@@ -55,27 +63,104 @@ class MainViewModel @Inject constructor(
                 getPrice(event.selectedCrust, event.selectedSize)
             }
             is UiEvent.AddItemToCart -> {
-                val newCartList:MutableList<CartItem> = mutableListOf()
+                val newCartList: MutableList<CartItem> = mutableListOf()
                 newCartList.addAll(pizzaUiState.cartItemList)
                 var quant = 1
-                val price = pizzaUiState.currentPrice
-                newCartList.forEach { cartItem->
+                val price = getCurrentItemPrice(event.cartItem)
+                newCartList.forEach { cartItem ->
                     if (cartItem.selectedCrust == event.cartItem.selectedCrust && cartItem.selectedSize == event.cartItem.selectedSize) {
                         quant = cartItem.quantity + 1
                         newCartList.remove(cartItem)
                     }
                 }
 
-                val newCartItem = event.cartItem.copy(quantity = quant, price = price*quant)
+                val newCartItem = event.cartItem.copy(quantity = quant, price = price * quant)
+
+                if (newCartList.contains(event.cartItem.copy(quantity = quant - 1))) {
+                    newCartList.remove(event.cartItem.copy(quantity = quant - 1))
+                }
 
                 newCartList.add(newCartItem)
 
-                pizzaUiState= pizzaUiState.copy(
-                    cartItemList = newCartList.distinct().toMutableList()
+
+                calculateTotalQuantityPrice(newCartList)
+                pizzaUiState = pizzaUiState.copy(
+                    cartItemList = newCartList.distinct().toMutableList(),
+                    totalQuantity = totalQuantity,
+                    totalPrice = totalPrice
                 )
             }
+            is UiEvent.RemoveItemFromCart -> {
 
+                val newCartList: MutableList<CartItem> = mutableListOf()
+                newCartList.addAll(pizzaUiState.cartItemList)
+
+                newCartList.remove(event.cartItem)
+
+                calculateTotalQuantityPrice(newCartList)
+                pizzaUiState = pizzaUiState.copy(
+                    cartItemList = newCartList.distinct().toMutableList(),
+                    totalQuantity = totalQuantity,
+                    totalPrice = totalPrice
+                )
+            }
+            is UiEvent.ReduceQuantity -> {
+                val newCartList: MutableList<CartItem> = mutableListOf()
+                newCartList.addAll(pizzaUiState.cartItemList)
+
+
+                val newItem = event.cartItem.copy(
+                    quantity = event.cartItem.quantity - 1,
+                    price = getCurrentItemPrice(event.cartItem) * (event.cartItem.quantity - 1)
+                )
+
+
+                newCartList.remove(event.cartItem)
+
+                newCartList.add(newItem)
+
+                calculateTotalQuantityPrice(newCartList)
+                pizzaUiState = pizzaUiState.copy(
+                    cartItemList = newCartList.distinct().toMutableList(),
+                    totalQuantity = totalQuantity,
+                    totalPrice = totalPrice
+                )
+            }
+            is UiEvent.AddQuantity -> {
+                val newCartList: MutableList<CartItem> = mutableListOf()
+                newCartList.addAll(pizzaUiState.cartItemList)
+
+
+                val newItem = event.cartItem.copy(
+                    quantity = event.cartItem.quantity + 1,
+                    price = getCurrentItemPrice(event.cartItem) * (event.cartItem.quantity + 1)
+                )
+
+                newCartList.remove(event.cartItem)
+
+                newCartList.add(newItem)
+
+                calculateTotalQuantityPrice(newCartList)
+                pizzaUiState = pizzaUiState.copy(
+                    cartItemList = newCartList.distinct().toMutableList(),
+                    totalQuantity = totalQuantity,
+                    totalPrice = totalPrice
+                )
+            }
         }
+    }
+
+    private fun calculateTotalQuantityPrice(list: List<CartItem>) {
+        totalQuantity = 0
+        totalPrice = 0
+        list.forEach {
+            totalQuantity += it.quantity
+            totalPrice += it.price
+        }
+    }
+
+    private fun getCurrentItemPrice(cartItem: CartItem): Int {
+        return cartItem.price / cartItem.quantity
     }
 
     private fun getPrice(selectedCrust: String, selectedSize: String) {
