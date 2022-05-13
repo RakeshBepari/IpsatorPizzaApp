@@ -4,14 +4,18 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -31,7 +35,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
-                    Greeting()
+                    MainScreen()
                 }
             }
         }
@@ -39,7 +43,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(
+fun MainScreen(
     mainViewModel: MainViewModel = hiltViewModel()
 ) {
     val uiState = mainViewModel.pizzaUiState
@@ -89,10 +93,15 @@ fun Greeting(
             )
         }
 
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 8.dp)){
-            Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
                 if (uiState.cartItemList.isNotEmpty()) {
                     ShoppingCart(
                         list = uiState.cartItemList,
@@ -106,22 +115,26 @@ fun Greeting(
                             mainViewModel.onEvent(UiEvent.RemoveItemFromCart(cartItem = it))
                         }
                     )
+                } else {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_amico),
+                        contentDescription = "Cart Empty"
+                    )
                 }
 
             }
-            Row(modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp)
-                .align(Alignment.BottomEnd)
-                .padding(2.dp),
-            horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
+                    .align(Alignment.BottomEnd)
+                    .padding(2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Text(text = "Total Quantity: ${uiState.totalQuantity}")
                 Text(text = "Total Price: ₹ ${uiState.totalPrice}")
             }
         }
-
-
-        
 
 
     }
@@ -137,7 +150,11 @@ fun CustomDialog(
     onDismiss: () -> Unit
 ) {
     Dialog(onDismissRequest = { onDismiss() }) {
-        Column {
+        Column(
+            modifier = Modifier
+                .background(Color.DarkGray, RoundedCornerShape(10.dp))
+                .padding(16.dp)
+        ) {
             Text(text = "name: Non-veg-pizza")
             Text(text = "isVeg: false")
             Text(text = "description: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.")
@@ -187,17 +204,17 @@ fun ShoppingCart(
     removeItem: (CartItem) -> Unit
 ) {
     LazyColumn(
-        verticalArrangement = Arrangement.spacedBy(20.dp),
-        modifier = Modifier.padding(16.dp)
+        verticalArrangement = Arrangement.spacedBy(50.dp),
+        modifier = Modifier.padding(top = 6.dp, bottom = 50.dp, start = 8.dp,end=8.dp)
     ) {
         items(list) { item ->
-            Column(modifier = Modifier.wrapContentHeight()) {
-                Text(text = "Name: "+item.name)
-                Text(text = "Desc: "+item.description)
-                Text(text = "isVeg: "+item.isVeg.toString())
-                Text(text = "Crust: "+item.selectedCrust)
-                Text(text = "Size: "+item.selectedSize)
-                Text(text = "Price: "+item.price.toString())
+            Column(modifier = Modifier.wrapContentHeight(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(text = "Name: " + item.name)
+                Text(text = "Desc: " + item.description)
+                Text(text = "isVeg: " + item.isVeg.toString())
+                Text(text = "Crust: " + item.selectedCrust)
+                Text(text = "Size: " + item.selectedSize)
+                Text(text = "Price: " + item.price.toString())
 
                 Spacer(modifier = Modifier.height(10.dp))
 
@@ -215,8 +232,11 @@ fun ShoppingCart(
                             contentDescription = "Remove"
                         )
                     }
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(text = "Quan: "+item.quantity.toString())
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(text = "Quan: " + item.quantity.toString())
                         Button(onClick = { removeItem(item) }) {
                             Text(text = "Remove")
                         }
@@ -341,6 +361,6 @@ fun CustomDropdown(
 @Composable
 fun DefaultPreview() {
     IpsatorPizzaAppTheme {
-        Greeting()
+        MainScreen()
     }
 }
