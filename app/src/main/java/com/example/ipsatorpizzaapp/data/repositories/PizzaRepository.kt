@@ -2,13 +2,19 @@ package com.example.ipsatorpizzaapp.data.repositories
 
 import com.example.ipsatorpizzaapp.data.remote.PizzaApi
 import com.example.ipsatorpizzaapp.data.remote.responses.PizzaDto
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 class PizzaRepository @Inject constructor(
-    val api : PizzaApi
+    private val api : PizzaApi
 ) {
 
     suspend fun getPizza():PizzaDto{
-        return api.getRemotePizza()
+
+        return withContext(Dispatchers.IO){
+             api.getRemotePizza()
+        }
+
     }
 }

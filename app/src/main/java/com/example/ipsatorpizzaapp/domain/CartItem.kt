@@ -1,4 +1,4 @@
-package com.example.ipsatorpizzaapp
+package com.example.ipsatorpizzaapp.domain
 
 data class CartItem(
     val name: String,

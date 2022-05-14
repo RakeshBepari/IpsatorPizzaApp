@@ -8,31 +8,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ipsatorpizzaapp.data.remote.responses.PizzaDto
 import com.example.ipsatorpizzaapp.data.remote.responses.Size
-import com.example.ipsatorpizzaapp.data.remote.responses.getpizzadto
 import com.example.ipsatorpizzaapp.data.repositories.PizzaRepository
+import com.example.ipsatorpizzaapp.domain.CartItem
+import com.example.ipsatorpizzaapp.ui.PizzaUiState
+import com.example.ipsatorpizzaapp.ui.UiEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-
-data class PizzaUiState(
-    val pizzaDto: PizzaDto = getpizzadto(),
-    var crustSizeMap: MutableMap<String, List<String>> = mutableMapOf(),
-    var currentPrice: Int = 235,
-    var cartItemList: MutableList<CartItem> = mutableListOf(),
-    val totalQuantity: Int = 0,
-    val totalPrice: Int = 0
-
-)
-
-sealed class UiEvent() {
-    data class Selected(val selectedCrust: String, val selectedSize: String) : UiEvent()
-    data class AddItemToCart(val cartItem: CartItem) : UiEvent()
-    data class AddQuantity(val cartItem: CartItem) : UiEvent()
-    data class RemoveItemFromCart(val cartItem: CartItem) : UiEvent()
-    data class ReduceQuantity(val cartItem: CartItem) : UiEvent()
-}
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
@@ -59,10 +43,20 @@ class MainViewModel @Inject constructor(
 
     fun onEvent(event: UiEvent) {
         when (event) {
+
+            /**
+             * Changes the state of current selected crust and size
+             * */
             is UiEvent.Selected -> {
                 getPrice(event.selectedCrust, event.selectedSize)
             }
+
+            /**
+             * Adds an item to the cart while checking if the item is already available if so increasing the count and updating
+             * the price of the item and also updating the total quantity and total price
+             * */
             is UiEvent.AddItemToCart -> {
+
                 val newCartList: MutableList<CartItem> = mutableListOf()
                 newCartList.addAll(pizzaUiState.cartItemList)
                 var quant = 1
@@ -90,6 +84,10 @@ class MainViewModel @Inject constructor(
                     totalPrice = totalPrice
                 )
             }
+
+            /**
+             * It removes the items form the cart even if there are multiple quantities of it available
+             * */
             is UiEvent.RemoveItemFromCart -> {
 
                 val newCartList: MutableList<CartItem> = mutableListOf()
@@ -104,6 +102,12 @@ class MainViewModel @Inject constructor(
                     totalPrice = totalPrice
                 )
             }
+
+            /**
+             * Decreases the quantity of an item in the cart while checking if the item has only one quantity left
+             * if so removing the item completely and updating the price according
+             * It also updates the total quantity and total price
+             * */
             is UiEvent.ReduceQuantity -> {
                 val newCartList: MutableList<CartItem> = mutableListOf()
                 newCartList.addAll(pizzaUiState.cartItemList)
@@ -126,6 +130,12 @@ class MainViewModel @Inject constructor(
                     totalPrice = totalPrice
                 )
             }
+
+            /**
+             * Increases the quantity of an item in the cart
+             * and updating the price according
+             * It also updates the total quantity and total price
+             * */
             is UiEvent.AddQuantity -> {
                 val newCartList: MutableList<CartItem> = mutableListOf()
                 newCartList.addAll(pizzaUiState.cartItemList)
@@ -150,6 +160,11 @@ class MainViewModel @Inject constructor(
         }
     }
 
+
+    /**
+     * It recalculates the total quantity and total price everytime its called
+     * As and when values are add or removed this function is called
+     * */
     private fun calculateTotalQuantityPrice(list: List<CartItem>) {
         totalQuantity = 0
         totalPrice = 0
@@ -159,10 +174,17 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Gives the single quantity price of the current cart item
+     * */
     private fun getCurrentItemPrice(cartItem: CartItem): Int {
         return cartItem.price / cartItem.quantity
     }
 
+    /**
+     * Updates the state of the screen.
+     * Updates the current price which needs to be shown according to the selectedCrust and selectedSize
+     * */
     private fun getPrice(selectedCrust: String, selectedSize: String) {
         pizzaUiState.pizzaDto.crusts.forEach { crust ->
             if (crust.name == selectedCrust) {
@@ -175,17 +197,23 @@ class MainViewModel @Inject constructor(
         }
     }
 
+
+    /**
+     * Map the corresponding the crust to their corresponding sizes
+     * */
     private fun createCrustSizeList() {
         pizzaUiState.pizzaDto.crusts.forEach { crust ->
             crustSizeList[crust.name] = giveSizes(crust.sizes)
             Log.d("MainViewModel", crustSizeList.toString())
         }
-//        Log.d("CrustSizeList",crustSizeList.toString())
         pizzaUiState = pizzaUiState.copy(
             crustSizeMap = crustSizeList
         )
     }
 
+    /**
+     * Makes a list of sizes by its name and gives the list
+     * */
     private fun giveSizes(sizes: List<Size>): List<String> {
         val list = mutableListOf<String>()
         sizes.forEach { size ->
@@ -194,7 +222,10 @@ class MainViewModel @Inject constructor(
         return list
     }
 
-    private fun getPizza() = viewModelScope.launch {
+    /**
+     * Gets the pizza from a remote API
+     * */
+    private fun getPizza() = viewModelScope.launch{
         val newPizza = repository.getPizza()
         pizzaUiState = pizzaUiState.copy(
             pizzaDto = PizzaDto(
